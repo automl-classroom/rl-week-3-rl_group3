@@ -135,3 +135,6 @@ outputs
 
 # Tmp
 tmp*
+
+# IDE
+.vscode
