@@ -51,6 +51,7 @@ class SARSAAgent(AbstractAgent):
         self.n_actions = env.action_space.n
 
         # Build Q so that unseen states map to zero‐vectors
+        # Q is a dictionary with keys: states (type: Any) and values: actions (type: np.arrays)
         self.Q: DefaultDict[Any, np.ndarray] = defaultdict(
             lambda: np.zeros(self.n_actions, dtype=float)
         )
@@ -72,6 +73,7 @@ class SARSAAgent(AbstractAgent):
         Any
             The selected action.
         """
+        # return action according to epsilon greedy policy
         return self.policy(self.Q, state, evaluate=evaluate)
 
     def save(self, path: str) -> Any:  # type: ignore
@@ -126,11 +128,15 @@ class SARSAAgent(AbstractAgent):
         float
             The updated Q-value for the (state, action) pair.
         """
+        # Check if episode has ended, if so, use value of 0. for the next state
+        if done:
+            self.Q[next_state][next_action] = 0.0
 
         # SARSA update rule
-        # TODO: Implement the SARSA update rule here.
-        # Use a value of 0. for terminal states and
-        # update the new Q value in the Q table of this class.
-        # Return the new Q value --currently always returns 0.0
+        self.Q[state][action] = self.Q[state][action] + self.alpha * (
+            reward
+            + self.gamma * self.Q[next_state][next_action]
+            - self.Q[state][action]
+        )
 
-        return 0.0
+        return self.Q[state][action]
