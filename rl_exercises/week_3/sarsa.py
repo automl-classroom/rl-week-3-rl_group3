@@ -48,14 +48,14 @@ class SARSAAgent(AbstractAgent):
         self.alpha = alpha
 
         # number of actions → used by Q’s default factory
-        self.n_actions = env.action_space.n
+        self.n_actions = env.action_space.n  # .n = len ?
 
         # Build Q so that unseen states map to zero‐vectors
         self.Q: DefaultDict[Any, np.ndarray] = defaultdict(
             lambda: np.zeros(self.n_actions, dtype=float)
         )
 
-        self.policy = policy
+        self.policy = policy  # egreedy
 
     def predict_action(self, state: np.array, evaluate: bool = False) -> Any:  # type: ignore # noqa
         """Select an action for the given state using the policy.
@@ -133,4 +133,15 @@ class SARSAAgent(AbstractAgent):
         # update the new Q value in the Q table of this class.
         # Return the new Q value --currently always returns 0.0
 
-        return 0.0
+        # 0. for terminal states
+        if done:
+            Q_next = 0.0  # best possible way?
+        else:
+            Q_next = self.Q[next_state][next_action]
+
+        Q_update = self.Q[state][action] + self.alpha * (
+            reward + self.gamma * Q_next - self.Q[state][action]
+        )  # implementing SARSA
+        self.Q[state][action] = Q_update  # updating the Q value in the Q Table
+
+        return Q_update
