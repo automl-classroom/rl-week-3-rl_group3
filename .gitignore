@@ -135,3 +135,9 @@ outputs
 
 # Tmp
 tmp*
+
+# IDE
+.vscode
+
+# files
+*.csv
