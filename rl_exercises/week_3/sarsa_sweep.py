@@ -8,6 +8,8 @@ import hydra
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
+# from sarsa import SARSAAgent
+
 
 def run_episodes(agent, env, num_episodes=5):
     """Run multiple episodes using the SARSA algorithm.
@@ -34,24 +36,29 @@ def run_episodes(agent, env, num_episodes=5):
     # Currently, the funciton runs only one episode and returns the total reward without discounting.
     # Extend it to run multiple episodes and store the total discounted rewards in a list.
     # Finally, return the mean discounted reward across episodes.
+    discounted_rewards = []
+    for i in range(num_episodes):
+        total = 0.0
+        state, _ = env.reset()
+        done = False
+        action = agent.predict_action(state)
+        while not done:
+            next_state, reward, term, trunc, _ = env.step(action)
+            done = term or trunc
+            next_action = agent.predict_action(next_state)
+            agent.update_agent(state, action, reward, next_state, next_action, done)
+            total += reward  # do we need to discount rewards here!?
+            state, action = next_state, next_action
+        discounted_rewards.append(total)
 
-    total = 0.0
-    state, _ = env.reset()
-    done = False
-    action = agent.predict_action(state)
-    while not done:
-        next_state, reward, term, trunc, _ = env.step(action)
-        done = term or trunc
-        next_action = agent.predict_action(next_state)
-        agent.update_agent(state, action, reward, next_state, next_action, done)
-        total += reward
-        state, action = next_state, next_action
-    return total
+    mean_reward = sum(discounted_rewards) / num_episodes
+
+    return mean_reward
 
 
 # Decorate the function with the path of the config file and the particular config to use
 @hydra.main(
-    config_path="../configs/agent/", config_name="sarsa_sweep", version_base="1.1"
+    config_path="../configs/agent/", config_name="sarsa_sweep", version_base="1.2"
 )
 def main(cfg: DictConfig) -> dict:
     """Main function to run SARSA with Hydra-configured components.
@@ -74,15 +81,15 @@ def main(cfg: DictConfig) -> dict:
     env = instantiate(cfg.env)
     # instantiate the policy (passing in env!)
     policy = instantiate(cfg.policy, env=env)
-    # 3) instantiate the agent (passing in env & policy)
+    # instantiate the agent (passing in env & policy)
     agent = instantiate(cfg.agent, env=env, policy=policy)
 
-    # 4) (optional) reseed for reproducibility
+    # (optional) reseed for reproducibility
     if cfg.seed is not None:
         env.reset(seed=cfg.seed)
         env.action_space.seed(cfg.seed)
 
-    # 5) run & return reward
+    # run & return reward
     total_reward = run_episodes(agent, env, cfg.num_episodes)
     return total_reward
 
